@@ -44,15 +44,18 @@ void doStd() {
     
         
     while (1) {
-        sleep(5);
+     /*   sleep(5);
         raise(SIGHUP);
         raise(SIGUSR1);
-        raise(SIGUSR2);
+        raise(SIGUSR2); */
     } 
 } 
 
-void doKill() {
-    
+void doKill(char* proc, char* sig) {
+    if (kill(atoi(proc), atoi(sig)) == -1) {
+        perror("kill");
+        exit(1);
+    };
 }
 
 void doPOSIX() {
@@ -101,7 +104,7 @@ int main(int argc, char** argv) {
     if (strcmp(mode,"std") == 0) {
         doStd();
     } else if (strcmp(mode,"kill") == 0) {
-        doKill();
+        doKill(proc,sig);
     } else if (strcmp(mode,"posix") == 0) {
         doPOSIX();
     } else if (strcmp(mode,"child") == 0) {
