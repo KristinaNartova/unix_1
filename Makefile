@@ -1,4 +1,3 @@
-INC=includes
 OUT=bin
 SRC=src
 
