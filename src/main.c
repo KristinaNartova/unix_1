@@ -88,34 +88,22 @@ void doPOSIX(char* n) {
     time_t t;
     srand((unsigned) time(&t));
     
-    struct sigaction sigusrone;
-    struct sigaction sigusrtwo;
-    struct sigaction sighup;
+    struct sigaction othersignals;
     struct sigaction sigchld;
     
-    sigusrone.sa_sigaction = saveHandler;
-    sigusrtwo.sa_sigaction = saveHandler;
-    sighup.sa_sigaction = saveHandler;
+    othersignals.sa_sigaction = saveHandler;
     sigchld.sa_sigaction = printLogHandler;
     
     
-    sigusrone.sa_flags = SA_SIGINFO;
-    sigusrtwo.sa_flags = SA_SIGINFO;
-    sighup.sa_flags = SA_SIGINFO;
+    othersignals.sa_flags = SA_SIGINFO;
     sigchld.sa_flags = SA_SIGINFO;
     
-    if (sigaction(SIGUSR1, &sigusrone, NULL) == -1) {
+    if (sigaction(SIGUSR1, &othersignals, NULL) == -1) {
         perror("sigaction");
         exit(1);
     };
-
-    
-    if (sigaction(SIGUSR2, &sigusrtwo, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    };
-        
-    if (sigaction(SIGHUP, &sighup, NULL)) {
+       
+    if (sigaction(SIGHUP, &othersignals, NULL)) {
         perror("sigaction");
         exit(1);
     };
@@ -124,6 +112,32 @@ void doPOSIX(char* n) {
         perror("sigaction");
         exit(1);
     }
+
+    if (sigaction(SIGINT, &othersignals, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+
+    if (sigaction(SIGQUIT, &othersignals, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+
+    if (sigaction(SIGABRT, &othersignals, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+
+    if (sigaction(SIGILL, &othersignals, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+    
+    if (sigaction(SIGFPE, &othersignals, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+
     
     pid_t child = fork();
     if (child == 0) {
@@ -132,26 +146,13 @@ void doPOSIX(char* n) {
             
         printf("CHILD:\n");
         for(int i=0;i<amountInt;i++) {
-            int sigN = rand()%3;
-            int next;
-            switch(sigN) {
-                case 0:
-                    next = SIGUSR1;
-                    break;
-                case 1:
-                    next = SIGUSR2;
-                    break;
-                case 2:
-                    next = SIGHUP;
-                    break;
-                }
-                
             val.sival_int = rand()%100;
-            if (sigqueue(getppid(),next,val) == -1) {
+	    int signo = rand()%8+1;
+            if (sigqueue(getppid(),signo,val) == -1) {
                 perror("sigqueue");
                 exit(1);
             };
-            printf("N: %d PID: %d PPID: %d SIGNO: %d NUMBER: %d \n", i+1, getpid(), getppid(), next, val.sival_int);
+            printf("N: %d PID: %d PPID: %d SIGNO: %d NUMBER: %d \n", i+1, getpid(), getppid(), signo, val.sival_int);
             sleep(5);
         }
         exit(13);
