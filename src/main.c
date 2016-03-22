@@ -6,9 +6,10 @@
 #include <ctype.h>
 #include <getopt.h>
 #include <errno.h>
+#include <handlers.h>
 
-char log[100][100];
-int logIndex = 0;
+/*char arr[100][100];
+int i = 0;
 
 void stdHandler(int signum, siginfo_t* info, void* f) {
     printf("%d | %d\n", info->si_signo, info->si_pid);
@@ -26,206 +27,16 @@ void fullInfoHandler(int signum, siginfo_t* info, void* f) {
 
 
 void saveHandler(int signum, siginfo_t* info,void* f) {
-    sprintf(log[logIndex], "N: %d  PID: %d  SIGNO: %d  NUMBER: %d ", logIndex+1, getpid(), info->si_signo, info->si_value.sival_int);
-    logIndex++;
+    sprintf(arr[i], "N: %d  PID: %d  SIGNO: %d  NUMBER: %d ", i+1, getpid(), info->si_signo, info->si_value.sival_int);
+    i++;
 }
 
 void printLogHandler(int signum, siginfo_t* info, void* f) {
     printf("PARENT:\n");
-    for (int i=0;i<logIndex;i++) {
-        printf("%s\n", log[i]);
+    for (int j=0;j<i;j++) {
+        printf("%s\n", arr[j]);
     }
-}
-
-
-void doStd() {
-    struct sigaction sigusrone;
-    struct sigaction sigusrtwo;
-    struct sigaction sighup;
-    
-    sigusrone.sa_sigaction = stdHandler;
-    sigusrtwo.sa_sigaction = stdHandler;
-    sighup.sa_sigaction = stdHandler;
-    
-    
-    sigusrone.sa_flags = SA_SIGINFO;
-    sigusrtwo.sa_flags = SA_SIGINFO;
-    sighup.sa_flags = SA_SIGINFO;
-    
-    if (sigaction(SIGUSR1, &sigusrone, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    };
-
-    
-    if (sigaction(SIGUSR2, &sigusrtwo, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    };
-        
-    if (sigaction(SIGHUP, &sighup, NULL)) {
-        perror("sigaction");
-        exit(1);
-    };
-    
-        
-    while (1) {
-     /*   sleep(5);
-        raise(SIGHUP);
-        raise(SIGUSR1);
-        raise(SIGUSR2); */
-    } 
-} 
-
-void doKill(char* proc, char* sig) {
-    if (kill(atoi(proc), atoi(sig)) == -1) {
-        perror("kill");
-        exit(1);
-    };
-}
-
-void doPOSIX(char* n) {
-    time_t t;
-    srand((unsigned) time(&t));
-    
-    struct sigaction othersignals;
-    struct sigaction sigchld;
-    
-    othersignals.sa_sigaction = saveHandler;
-    sigchld.sa_sigaction = printLogHandler;
-    
-    
-    othersignals.sa_flags = SA_SIGINFO;
-    sigchld.sa_flags = SA_SIGINFO;
-    
-    if (sigaction(SIGUSR1, &othersignals, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    };
-       
-    if (sigaction(SIGHUP, &othersignals, NULL)) {
-        perror("sigaction");
-        exit(1);
-    };
-       
-    if (sigaction(SIGCHLD, &sigchld, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-
-    if (sigaction(SIGINT, &othersignals, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-
-    if (sigaction(SIGQUIT, &othersignals, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-
-    if (sigaction(SIGABRT, &othersignals, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-
-    if (sigaction(SIGILL, &othersignals, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-    
-    if (sigaction(SIGFPE, &othersignals, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-
-    
-    pid_t child = fork();
-    if (child == 0) {
-        int amountInt = atoi(n);
-        union sigval val;
-            
-        printf("CHILD:\n");
-        for(int i=0;i<amountInt;i++) {
-            val.sival_int = rand()%100;
-	    int signo = rand()%8+1;
-            if (sigqueue(getppid(),signo,val) == -1) {
-                perror("sigqueue");
-                exit(1);
-            };
-            printf("N: %d PID: %d PPID: %d SIGNO: %d NUMBER: %d \n", i+1, getpid(), getppid(), signo, val.sival_int);
-            sleep(5);
-        }
-        exit(13);
-    } else if (child > 0) {
-        while (1) {
-            
-        }
-    } else {
-        perror("fork");
-        exit(1);
-    }
-}
-
-void doChild() {
-    struct sigaction sigchld;
-    sigchld.sa_flags = SA_SIGINFO;
-    sigchld.sa_sigaction = fullInfoHandler;
-    if (sigaction(SIGCHLD, &sigchld, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-    
-    pid_t child = fork();
-    if (child == 0) {
-        sleep(5);
-        exit(0);
-    } else if (child > 0) {
-        while (1) {
-            
-        }
-    } else {
-        perror("fork");
-        exit(1);
-    }
-}
-
-
-void doPipe() {
-    struct sigaction sigpipe;
-    sigpipe.sa_flags = SA_SIGINFO;
-    sigpipe.sa_sigaction = stdHandler;
-    if (sigaction(SIGPIPE, &sigpipe, NULL) == -1) {
-        perror("sigaction");
-        exit(1);
-    }
-    
-    pid_t child = fork();
-    char test[] = "test";
-    int fd[2];
-    
-    if (pipe(fd) < 0) {
-        perror("Pipe");
-        exit(1);
-    };
-    
-    if (child == 0) {
-        close(fd[1]);
-        close(fd[0]);
-        exit(0);
-    } else if (child > 0) {
-        close(fd[0]);
-        sleep(7);
-        if (write(fd[1], test, (strlen(test)+1)) == -1) {
-            perror("Writing failed");
-            exit(1);
-        };
-    } else {
-        perror("fork");
-        exit(1);
-    }
-}
-
-
+} */
 
 int main(int argc, char** argv) {
     int c = 0;
